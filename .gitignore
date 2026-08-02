@@ -1,0 +1,28 @@
+# Folders not tracked in this repo
+/database/
+/docs/
+/agents/
+/scripts/
+.claude/
+
+# Local-only agent config (not for GitHub)
+/CLAUDE.md
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env
+*.env.local
+
+# Frontend (React Native)
+frontend/**/node_modules/
+frontend/**/.expo/
+frontend/**/ios/build/
+frontend/**/android/build/
+
+# Backend (Spring Boot / Maven)
+backend/**/target/
+backend/**/*.class
