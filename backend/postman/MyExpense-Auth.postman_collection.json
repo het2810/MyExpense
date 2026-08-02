@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "MyExpense — Auth (Domain 1)",
+    "description": "All 8 endpoints of the MyExpense auth domain (docs/api/authentication-api.md).\n\nLogin and Refresh automatically save accessToken/refreshToken into collection variables, so later requests just work without copy-pasting.\n\nverification/reset tokens are NOT returned by the API by design — grab them from the app console, printed as [DEV EMAIL STUB], and paste into the verificationToken / resetToken variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1/auth" },
+    { "key": "email", "value": "test1@example.com" },
+    { "key": "password", "value": "Passw0rd1" },
+    { "key": "newPassword", "value": "NewPassw0rd2" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "verificationToken", "value": "" },
+    { "key": "resetToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json();",
+              "pm.test('emailVerified is false', () => pm.expect(b.emailVerified).to.eql(false));",
+              "pm.test('roles contains USER', () => pm.expect(b.roles).to.include('USER'));",
+              "pm.test('createdAt is present', () => pm.expect(b.createdAt).to.not.eql(null));",
+              "console.log('Now grab the [DEV EMAIL STUB] verification token from the app console.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/register", "host": ["{{baseUrl}}"], "path": ["register"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"firstName\": \"Het\",\n  \"lastName\": \"Patel\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', b.accessToken);",
+              "pm.collectionVariables.set('refreshToken', b.refreshToken);",
+              "pm.test('expiresIn is 900', () => pm.expect(b.expiresIn).to.eql(900));",
+              "pm.test('user object present', () => pm.expect(b.user).to.be.an('object'));",
+              "console.log('Tokens saved to collection variables.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "3. Refresh (rotates the token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', b.accessToken);",
+              "pm.collectionVariables.set('refreshToken', b.refreshToken);",
+              "pm.test('user omitted on refresh', () => pm.expect(b.user == null).to.be.true);",
+              "console.log('Rotated. Old token is now revoked — replay it to test reuse detection.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/refresh", "host": ["{{baseUrl}}"], "path": ["refresh"] },
+        "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+      }
+    },
+    {
+      "name": "4. Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/logout", "host": ["{{baseUrl}}"], "path": ["logout"] },
+        "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+      }
+    },
+    {
+      "name": "5. Forgot password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "console.log('Copy the [DEV EMAIL STUB] reset token from the app console into the resetToken variable.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/forgot-password", "host": ["{{baseUrl}}"], "path": ["forgot-password"] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\"\n}" }
+      }
+    },
+    {
+      "name": "6. Reset password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/reset-password", "host": ["{{baseUrl}}"], "path": ["reset-password"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "7. Verify email",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/verify-email", "host": ["{{baseUrl}}"], "path": ["verify-email"] },
+        "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{verificationToken}}\"\n}" }
+      }
+    },
+    {
+      "name": "8. Resend verification",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/resend-verification", "host": ["{{baseUrl}}"], "path": ["resend-verification"] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\"\n}" }
+      }
+    },
+    {
+      "name": "Negative — wrong password (expect 401 INVALID_CREDENTIALS)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"TotallyWrong9\"\n}" }
+      }
+    },
+    {
+      "name": "Negative — anti-enumeration (unknown email, expect same 200 message)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/forgot-password", "host": ["{{baseUrl}}"], "path": ["forgot-password"] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"definitely-not-registered@example.com\"\n}" }
+      }
+    },
+    {
+      "name": "Negative — replay old refresh token (expect REFRESH_TOKEN_REUSE_DETECTED)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/refresh", "host": ["{{baseUrl}}"], "path": ["refresh"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"PASTE_AN_ALREADY_ROTATED_TOKEN_HERE\"\n}"
+        }
+      }
+    }
+  ]
+}
